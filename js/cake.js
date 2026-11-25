@@ -50,8 +50,9 @@ const mix = (a, b, t) => a + (b - a) * t;
 
 export function initCake({ canvas, P, onProgress }) {
   const coarse = matchMedia('(pointer: coarse)').matches;
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !coarse, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.25 : 1.75));
+  const dpr = Math.min(devicePixelRatio, coarse ? 1 : 1.5);
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !coarse && dpr < 1.4, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(dpr);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -75,12 +76,14 @@ export function initCake({ canvas, P, onProgress }) {
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.8; root.add(shadow);
 
   const parts = { layers: [], wedges: [], shell: [], top: [], deco: [], drip: [] };
+  let lifted = [];
   const state = { x: 0, y: 4, s: 1, rot: 0, tilt: 0, wedge: 0, ex: 0, camY: 2, dist: 9, op: 1 };
   const physCache = {};
   const pointer = { x: 0, y: 0 };
-  addEventListener('pointermove', e => { pointer.x = e.clientX / innerWidth - .5; pointer.y = e.clientY / innerHeight - .5; }, { passive: true });
+  let VW = innerWidth, VH = innerHeight;
+  addEventListener('pointermove', e => { pointer.x = e.clientX / VW - .5; pointer.y = e.clientY / VH - .5; }, { passive: true });
 
-  let ready = false, visible = true, raf = 0, last = performance.now(), t = 0;
+  let ready = false, visible = true, raf = 0, last = performance.now(), t = 0, frameNo = 0;
   const loader = new GLTFLoader();
   const draco = new DRACOLoader(); draco.setDecoderPath('vendor/jsm/libs/draco/gltf/'); draco.setDecoderConfig({ type: 'wasm' }); loader.setDRACOLoader(draco);
   const done = new Promise((resolve, reject) => {
@@ -93,7 +96,7 @@ export function initCake({ canvas, P, onProgress }) {
         if (/Frosting|Drip|Cream|Berry/.test(mn)) {
           if (!physCache[mn]) {
             const src = o.material, drip = /Drip/.test(mn), jam = /Berry/.test(mn);
-            physCache[mn] = new THREE.MeshPhysicalMaterial({ color: src.color, roughness: drip ? 0.22 : jam ? 0.18 : 0.42, sheen: jam ? 0 : 0.7, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe9ec'), clearcoat: drip ? 0.7 : jam ? 0.9 : 0.08, clearcoatRoughness: jam ? 0.12 : 0.35, name: mn });
+            physCache[mn] = new THREE.MeshPhysicalMaterial({ color: src.color, roughness: drip ? 0.22 : jam ? 0.18 : 0.42, sheen: jam || coarse ? 0 : 0.7, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe9ec'), clearcoat: drip ? 0.7 : jam ? 0.9 : 0.08, clearcoatRoughness: jam ? 0.12 : 0.35, name: mn });
             if (/Frosting/.test(mn)) buttercream(physCache[mn]);
           }
           o.material = physCache[mn];
@@ -111,19 +114,25 @@ export function initCake({ canvas, P, onProgress }) {
         if (/^Drip_/.test(n)) parts.drip.push(o);
         o.userData.base = o.position.clone();
       });
+      lifted = [...parts.top, ...parts.deco, ...parts.drip];
       spin.add(model);
-      ready = true; resolve();
+      const go = () => { ready = true; resolve(); };
+      (renderer.compileAsync ? renderer.compileAsync(scene, camera) : Promise.resolve()).then(go, go);
     }, e => { if (e.total) onProgress?.(e.loaded / e.total); }, reject);
   });
 
+  let lastW = 0, lastH = 0;
   function resize() {
     const w = innerWidth, h = innerHeight;
+    VW = w;
+    if (coarse && w === lastW && Math.abs(h - lastH) < 160) return;
+    lastW = w; lastH = h; VH = h;
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   }
   addEventListener('resize', resize); resize();
 
   function targets() {
-    const mobile = innerWidth < 760;
+    const mobile = VW < 760;
     const intro = P.intro, h = P.hero, s = P.slice, l = P.layers;
     // fit: narrow viewports see less width, so shrink the cake with the aspect ratio
     const fit = clamp(camera.aspect / 1.45, 0.36, 1);
@@ -168,10 +177,10 @@ export function initCake({ canvas, P, onProgress }) {
     camera.position.set(0, state.camY, state.dist);
     camera.lookAt(0, 0.35, 0);
     const e = state.ex, w = state.wedge;
-    const mobileK = innerWidth < 760 ? 0.85 : 1;
+    const mobileK = VW < 760 ? 0.85 : 1;
     for (const L of parts.layers) L.o.position.y = L.o.userData.base.y + L.i * e * 0.42 * mobileK;
     const topLift = 6 * 0.42 * e * mobileK + e * 0.55;
-    for (const o of [...parts.top, ...parts.deco, ...parts.drip]) o.position.y = o.userData.base.y + topLift;
+    for (const o of lifted) o.position.y = o.userData.base.y + topLift;
     for (const o of parts.shell) { o.position.y = o.userData.base.y + e * 3.4; o.material.opacity = 1 - smooth(0.15, 0.7, e); o.visible = o.material.opacity > 0.01; }
     // wedge slides out toward the viewer (+Z local) and drops a touch
     for (const o of parts.wedges) {
@@ -186,6 +195,7 @@ export function initCake({ canvas, P, onProgress }) {
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+    frameNo++;
     if (!ready || !visible) return;
     const T = targets();
     const k = 1 - Math.exp(-dt * 7.5);
@@ -206,15 +216,14 @@ export function initCake({ canvas, P, onProgress }) {
     else if (name === 'jam') o = parts.layers.find(L => L.i === 4)?.o;
     else if (name === 'sponge') o = parts.layers.find(L => L.i === 3)?.o;
     if (!o) return null;
-    root.updateMatrixWorld();
-    // local centre-ish point of the part
-    o.geometry.computeBoundingBox?.();
+    if (project.frame !== frameNo) { root.updateMatrixWorld(); project.frame = frameNo; }
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
     const bb = o.geometry.boundingBox; const cy = (bb.min.y + bb.max.y) / 2;
     v.set(0, cy + dy, 0); o.localToWorld(v);
     right.set(1, 0, 0).applyQuaternion(camera.quaternion).multiplyScalar(side * state.s);
     v.add(right);
     v.project(camera);
-    return { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight };
+    return { x: (v.x * 0.5 + 0.5) * VW, y: (-v.y * 0.5 + 0.5) * VH };
   }
 
   document.addEventListener('visibilitychange', () => { last = performance.now(); });

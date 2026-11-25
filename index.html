@@ -17,10 +17,17 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght,SOFT@9..144,500..900,100&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght,SOFT@9..144,500..900,100&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght,SOFT@9..144,500..900,100&display=swap"></noscript>
 <link rel="preload" href="assets/3d/cake.glb" as="fetch" crossorigin>
 <link rel="modulepreload" href="vendor/three.module.min.js">
 <link rel="modulepreload" href="js/cake.js">
+<link rel="modulepreload" href="vendor/jsm/loaders/GLTFLoader.js">
+<link rel="modulepreload" href="vendor/jsm/loaders/DRACOLoader.js">
+<link rel="modulepreload" href="vendor/jsm/environments/RoomEnvironment.js">
+<link rel="modulepreload" href="vendor/jsm/utils/BufferGeometryUtils.js">
+<link rel="preload" href="vendor/jsm/libs/draco/gltf/draco_wasm_wrapper.js" as="fetch" crossorigin>
+<link rel="preload" href="vendor/jsm/libs/draco/gltf/draco_decoder.wasm" as="fetch" crossorigin>
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/jsm/"}}</script>
 </head>
@@ -68,7 +75,7 @@
 <div class="orbit-layer orbit-layer--front" id="orbitFront" aria-hidden="true"></div>
 <div class="stage" id="stage" aria-hidden="true">
   <canvas id="cakeCanvas"></canvas>
-  <img class="stage__poster" src="assets/3d/cake-poster.webp" alt="">
+  <img class="stage__poster" src="assets/3d/cake-poster.webp" alt="" loading="lazy">
 </div>
 
 <main id="main">
@@ -151,23 +158,20 @@
       <h2 class="title split" aria-label="The cake wall">The cake <em>wall</em></h2>
       <p class="wall__meta"><span id="wallIdx">01</span> / <span id="wallTotal">12</span> · real orders from our Instagram</p>
     </div>
-    <div class="marquee" aria-hidden="true"><div class="marquee__row" data-velocity data-dir="-1">
-      <span>Birthdays</span><b>✺</b><span>Weddings</span><b>✺</b><span>Little ones</span><b>✺</b><span>Hampers</span><b>✺</b><span>Anniversaries</span><b>✺</b>
-    </div></div>
     <div class="track" id="track">
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/wedding-blue-s.webp" data-src="assets/img/wedding-blue.webp" alt="Four-tier powder-blue wedding cake with cascading white roses and an L R monogram" loading="lazy"></div><figcaption><b>Powder-blue wedding</b><span>four tiers · cascading roses</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/glow-tiers-s.webp" alt="Three-tier white and gold birthday cake with a glowing light-up middle tier" loading="lazy"></div><figcaption><b>Light-up tiers</b><span>gold fans · glowing centre</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/rose-vine-s.webp" alt="Small white cake piped with deep red roses and green vines, written Ate Teen" loading="lazy"></div><figcaption><b>“Ate Teen” rose vine</b><span>1 kg · hand-piped roses</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/gold-tiers-s.webp" alt="Three-tier ivory cake with gold pearls and gold fan toppers" loading="lazy"></div><figcaption><b>Ivory &amp; gold</b><span>three tiers · gold pearls</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/passionfruit-s.webp" alt="Textured lilac-grey cake topped with passion fruit halves and blueberries" loading="lazy"></div><figcaption><b>Passion fruit &amp; berries</b><span>gold script · fresh fruit</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/pink-bow-s.webp" alt="Two-tier pink striped cake with a big pink fondant bow and daisies" loading="lazy"></div><figcaption><b>The pink bow</b><span>stripes · daisies</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/blue-gold-s.webp" alt="White cake with a ring of blueberries, gold leaf and a deep blue painted base" loading="lazy"></div><figcaption><b>Midnight &amp; gold</b><span>blueberry crown</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/music-book-s.webp" alt="Cream cake with music notes, an open book topper and pastel flowers" loading="lazy"></div><figcaption><b>Storybook florals</b><span>music notes · open book</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/peach-floral-s.webp" alt="Two-tier white cake with peach flowers and gold fan decorations" loading="lazy"></div><figcaption><b>Peach bloom</b><span>two tiers · dried florals</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/rainbow-s.webp" alt="Two-tier pink cake with a rainbow topper and a gold number two" loading="lazy"></div><figcaption><b>Rainbow for two</b><span>a second birthday</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/teddy-s.webp" alt="Two-tier white cake with a fondant teddy bear on top" loading="lazy"></div><figcaption><b>Little teddy</b><span>eleven months old</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/ink-gold-s.webp" alt="White cake with black brush strokes and gold leaf and a gold topper" loading="lazy"></div><figcaption><b>Ink &amp; gold</b><span>brush-stroke finish</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/noir-cross-s.webp" alt="Black vintage-piped cake with a white cross on top" loading="lazy"></div><figcaption><b>Noir vintage piping</b><span>all black · white cross</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/wedding-blue-s.webp" data-src="assets/img/wedding-blue.webp" alt="Four-tier powder-blue wedding cake with cascading white roses and an L R monogram" loading="lazy" decoding="async"></div><figcaption><b>Powder-blue wedding</b><span>four tiers · cascading roses</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/glow-tiers-s.webp" alt="Three-tier white and gold birthday cake with a glowing light-up middle tier" loading="lazy" decoding="async"></div><figcaption><b>Light-up tiers</b><span>gold fans · glowing centre</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/rose-vine-s.webp" alt="Small white cake piped with deep red roses and green vines, written Ate Teen" loading="lazy" decoding="async"></div><figcaption><b>“Ate Teen” rose vine</b><span>1 kg · hand-piped roses</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/gold-tiers-s.webp" alt="Three-tier ivory cake with gold pearls and gold fan toppers" loading="lazy" decoding="async"></div><figcaption><b>Ivory &amp; gold</b><span>three tiers · gold pearls</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/passionfruit-s.webp" alt="Textured lilac-grey cake topped with passion fruit halves and blueberries" loading="lazy" decoding="async"></div><figcaption><b>Passion fruit &amp; berries</b><span>gold script · fresh fruit</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/pink-bow-s.webp" alt="Two-tier pink striped cake with a big pink fondant bow and daisies" loading="lazy" decoding="async"></div><figcaption><b>The pink bow</b><span>stripes · daisies</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/blue-gold-s.webp" alt="White cake with a ring of blueberries, gold leaf and a deep blue painted base" loading="lazy" decoding="async"></div><figcaption><b>Midnight &amp; gold</b><span>blueberry crown</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/music-book-s.webp" alt="Cream cake with music notes, an open book topper and pastel flowers" loading="lazy" decoding="async"></div><figcaption><b>Storybook florals</b><span>music notes · open book</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/peach-floral-s.webp" alt="Two-tier white cake with peach flowers and gold fan decorations" loading="lazy" decoding="async"></div><figcaption><b>Peach bloom</b><span>two tiers · dried florals</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/rainbow-s.webp" alt="Two-tier pink cake with a rainbow topper and a gold number two" loading="lazy" decoding="async"></div><figcaption><b>Rainbow for two</b><span>a second birthday</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/teddy-s.webp" alt="Two-tier white cake with a fondant teddy bear on top" loading="lazy" decoding="async"></div><figcaption><b>Little teddy</b><span>eleven months old</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/ink-gold-s.webp" alt="White cake with black brush strokes and gold leaf and a gold topper" loading="lazy" decoding="async"></div><figcaption><b>Ink &amp; gold</b><span>brush-stroke finish</span></figcaption></figure>
+      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/noir-cross-s.webp" alt="Black vintage-piped cake with a white cross on top" loading="lazy" decoding="async"></div><figcaption><b>Noir vintage piping</b><span>all black · white cross</span></figcaption></figure>
       <a class="card card--end" href="https://www.instagram.com/b_for_baking/" target="_blank" rel="noopener" data-cursor="Open"><span class="script">see more</span><b>@b_for_baking</b><i>→</i></a>
     </div>
     <div class="wall__progress"><i id="wallBar"></i></div>
@@ -197,14 +201,14 @@
     <h2 class="moments__title" aria-label="Made for your moments.">Made for your <em>moments.</em></h2>
     <p class="moments__copy">Birthdays, anniversaries, a Tuesday that needed cake. Every order leaves the kitchen boxed, ribboned and ready to be the best part of the day.</p>
     <div class="polaroids" aria-hidden="true">
-      <figure class="pol"><img src="assets/img/hamper-balloon-s.webp" alt=""><figcaption>balloon hamper</figcaption></figure>
-      <figure class="pol"><img src="assets/img/rose-vine-2-s.webp" alt=""><figcaption>ate teen ♡</figcaption></figure>
-      <figure class="pol"><img src="assets/img/glow-tiers-2-s.webp" alt=""><figcaption>it glows!</figcaption></figure>
-      <figure class="pol"><img src="assets/img/music-book-2-s.webp" alt=""><figcaption>storybook</figcaption></figure>
-      <figure class="pol"><img src="assets/img/hamper-ferrero-2-s.webp" alt=""><figcaption>photo hamper</figcaption></figure>
-      <figure class="pol"><img src="assets/img/pink-bow-2-s.webp" alt=""><figcaption>bow on top</figcaption></figure>
-      <figure class="pol"><img src="assets/img/noir-cross-2-s.webp" alt=""><figcaption>noir piping</figcaption></figure>
-      <figure class="pol"><img src="assets/img/blue-gold-2-s.webp" alt=""><figcaption>midnight &amp; gold</figcaption></figure>    </div>
+      <figure class="pol"><img src="assets/img/hamper-balloon-s.webp" alt="" loading="lazy" decoding="async"><figcaption>balloon hamper</figcaption></figure>
+      <figure class="pol"><img src="assets/img/rose-vine-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>ate teen ♡</figcaption></figure>
+      <figure class="pol"><img src="assets/img/glow-tiers-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>it glows!</figcaption></figure>
+      <figure class="pol"><img src="assets/img/music-book-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>storybook</figcaption></figure>
+      <figure class="pol"><img src="assets/img/hamper-ferrero-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>photo hamper</figcaption></figure>
+      <figure class="pol"><img src="assets/img/pink-bow-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>bow on top</figcaption></figure>
+      <figure class="pol"><img src="assets/img/noir-cross-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>noir piping</figcaption></figure>
+      <figure class="pol"><img src="assets/img/blue-gold-2-s.webp" alt="" loading="lazy" decoding="async"><figcaption>midnight &amp; gold</figcaption></figure>    </div>
   </div>
 </section>
 

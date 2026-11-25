@@ -9,7 +9,9 @@ const SCROLL_MAP = {
 const html = document.documentElement;
 const reduced = html.classList.contains('reduced');
 const touch = html.classList.contains('touch');
-const mobile = () => innerWidth < 760;
+let VW = innerWidth, VH = innerHeight, MOB = VW < 760;
+addEventListener('resize', () => { VW = innerWidth; VH = innerHeight; MOB = VW < 760; });
+const mobile = () => MOB;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -25,7 +27,7 @@ let cake = null;
 /* ---------------- smooth scroll ---------------- */
 let lenis = null;
 if (!reduced) {
-  lenis = new Lenis({ lerp: 0.085, smoothWheel: true, syncTouch: false, wheelMultiplier: 0.95 });
+  lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, wheelMultiplier: 0.95 });
   window.__lenis = lenis;
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add(t => lenis.raf(t * 1000));
@@ -86,14 +88,13 @@ let loadProgress = 0;
 function setCount(v) { countEl.textContent = String(Math.round(v)).padStart(3, '0'); }
 
 async function boot() {
-  // cake
-  if (!reduced) {
-    try {
-      const mod = await import('./cake.js');
-      cake = mod.initCake({ canvas: $('#cakeCanvas'), P, onProgress: p => { loadProgress = Math.max(loadProgress, p); } });
-    } catch (e) { $('#stage').classList.add('no-webgl'); }
-  }
   if (reduced) { html.classList.add('ready'); initAll(); return; }
+  const failsafe = new Promise(r => setTimeout(r, touch ? 2400 : 3000));
+  // three.js + the cake load in parallel with the loader animation
+  const cakeReady = import('./cake.js').then(mod => {
+    cake = mod.initCake({ canvas: $('#cakeCanvas'), P, onProgress: p => { loadProgress = Math.max(loadProgress, p); } });
+    return cake.ready;
+  }).catch(() => { $('#stage').classList.add('no-webgl'); });
 
   const drawn = gsap.timeline();
   $$('.loader__svg path, .loader__svg circle').forEach(p => { const L = p.getTotalLength(); gsap.set(p, { strokeDasharray: L, strokeDashoffset: L }); });
@@ -103,29 +104,27 @@ async function boot() {
 
   const counter = { v: 0 };
   const start = performance.now();
-  const failsafe = new Promise(r => setTimeout(r, 4200));
-  const cakeReady = cake ? cake.ready.catch(() => {}) : Promise.resolve();
   let finished = false;
-  Promise.race([Promise.all([cakeReady, new Promise(r => setTimeout(r, 1700))]), failsafe]).then(() => { finished = true; });
+  Promise.race([Promise.all([cakeReady, new Promise(r => setTimeout(r, 600))]), failsafe]).then(() => { finished = true; });
   await new Promise(resolve => {
     const tick = () => {
       const elapsed = (performance.now() - start) / 1000;
       const target = finished ? 100 : Math.min(92, 20 + loadProgress * 60 + elapsed * 12);
-      counter.v += (target - counter.v) * 0.12;
+      counter.v += (target - counter.v) * (finished ? 0.25 : 0.12);
       setCount(counter.v);
-      if (finished && counter.v > 99.4) { setCount(100); resolve(); return; }
+      if (finished && counter.v > 98.5) { setCount(100); resolve(); return; }
       requestAnimationFrame(tick);
     };
     tick();
   });
   const out = gsap.timeline({ onComplete: () => { $('#loader').remove(); } });
-  out.to('.loader__mark, .loader__count, .loader__note', { y: -40, opacity: 0, duration: .6, ease: 'power3.in', stagger: .05 })
-     .to('#loader', { yPercent: -112, duration: 1.15, ease: 'expo.inOut' }, '-=.15')
+  out.to('.loader__mark, .loader__count, .loader__note', { y: -40, opacity: 0, duration: .4, ease: 'power3.in', stagger: .04 })
+     .to('#loader', { yPercent: -112, duration: .9, ease: 'expo.inOut' }, '-=.1')
      .add(() => {
        html.classList.add('ready'); lenis?.start(); initAll(); heroIntro();
        // slow network: the GLB may still be loading; fade the cake in when it lands
-       if (cake && !cake.isReady) { gsap.set('#stage', { opacity: 0 }); cake.ready.then(() => gsap.to('#stage', { opacity: 1, duration: 1.2 })); }
-     }, '-=.75');
+       if (!cake?.isReady) { gsap.set('#stage', { opacity: 0 }); cakeReady.then(() => gsap.to('#stage', { opacity: 1, duration: 1.2 })); }
+     }, '-=.6');
 }
 
 function heroIntro() {
@@ -158,16 +157,16 @@ function initAll() {
 
 /* ---------------- nav ---------------- */
 function initNav() {
-  const nav = $('#nav'); let lastY = 0;
+  const nav = $('#nav'), drawer = $('#drawer'), trayBtn = $('#trayBtn'), mbar = $('.mbar'); let lastY = 0;
   const onScroll = y => {
     nav.classList.toggle('is-solid', y > 60);
-    nav.classList.toggle('is-hidden', y > lastY + 4 && y > 400 && !$('#drawer').classList.contains('open'));
+    nav.classList.toggle('is-hidden', y > lastY + 4 && y > 400 && !drawer.classList.contains('open'));
     if (y < lastY - 4) nav.classList.remove('is-hidden');
     lastY = y;
-    $('#trayBtn').classList.toggle('show', y > innerHeight * 0.8);
-    $('.mbar')?.classList.toggle('show', y > innerHeight * 0.6);
-    const ft = $('#footer').getBoundingClientRect().top; $('.mbar')?.classList.toggle('over-footer', ft < innerHeight * 0.7);
+    trayBtn.classList.toggle('show', y > VH * 0.8);
+    mbar?.classList.toggle('show', y > VH * 0.6);
   };
+  if (mbar) ScrollTrigger.create({ trigger: '#footer', start: 'top 70%', end: 'max', onToggle: s => mbar.classList.toggle('over-footer', s.isActive) });
   if (lenis) lenis.on('scroll', e => onScroll(e.scroll)); else addEventListener('scroll', () => onScroll(scrollY), { passive: true });
   $('#burger').addEventListener('click', () => {
     const d = $('#drawer'); const open = !d.classList.contains('open');
@@ -206,18 +205,21 @@ function initMagnetic() {
 
 /* ---------------- hero life ---------------- */
 function initBlossomLife() {
-  $$('.blossom .fl').forEach((f, i) => gsap.to(f, { rotate: gsap.utils.random(-14, 14), duration: gsap.utils.random(2.2, 3.4), yoyo: true, repeat: -1, ease: 'sine.inOut', delay: i * .1 }));
-  gsap.to('.blossom', { rotate: 2, transformOrigin: '100% 0%', duration: 4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+  const life = [], petals = [];
+  $$('.blossom .fl').forEach((f, i) => life.push(gsap.to(f, { rotate: gsap.utils.random(-14, 14), duration: gsap.utils.random(2.2, 3.4), yoyo: true, repeat: -1, ease: 'sine.inOut', delay: i * .1 })));
+  life.push(gsap.to('.blossom', { rotate: 2, transformOrigin: '100% 0%', duration: 4, yoyo: true, repeat: -1, ease: 'sine.inOut' }));
   // drifting petals
   const hero = $('.hero');
   for (let i = 0; i < (mobile() ? 6 : 12); i++) {
     const p = document.createElement('i');
     p.style.cssText = 'position:absolute;z-index:4;width:12px;height:9px;border-radius:9px 0 9px 0;background:#F2C3C8;pointer-events:none;top:-20px;opacity:.9';
     hero.append(p);
-    const fall = () => gsap.fromTo(p, { x: gsap.utils.random(innerWidth * .45, innerWidth), y: -20, rotate: gsap.utils.random(0, 360) },
-      { x: `-=${gsap.utils.random(120, 360)}`, y: innerHeight + 40, rotate: `+=${gsap.utils.random(180, 540)}`, duration: gsap.utils.random(7, 12), ease: 'none', onComplete: fall });
-    gsap.delayedCall(gsap.utils.random(0, 8), fall);
+    const k = i;
+    const fall = () => { petals[k] = gsap.fromTo(p, { x: gsap.utils.random(innerWidth * .45, innerWidth), y: -20, rotate: gsap.utils.random(0, 360) },
+      { x: `-=${gsap.utils.random(120, 360)}`, y: innerHeight + 40, rotate: `+=${gsap.utils.random(180, 540)}`, duration: gsap.utils.random(7, 12), ease: 'none', onComplete: fall }); };
+    petals[k] = gsap.delayedCall(gsap.utils.random(0, 8), fall);
   }
+  ScrollTrigger.create({ trigger: '.hero', start: 'top bottom', end: 'bottom top', onToggle: s => { [...life, ...petals].forEach(t => t?.paused(!s.isActive)); } });
   // hero content parallax out
   gsap.to('.hero__inner', { yPercent: -18, opacity: .2, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
   gsap.to('.note', { y: -80, opacity: 0, ease: 'none', scrollTrigger: { trigger: '.hero', start: '20% top', end: '70% top', scrub: true } });
@@ -269,15 +271,18 @@ function initStory() {
     trigger: '#slice', start: 'top top', end: 'bottom bottom',
     onUpdate: s => { orbit.p = s.progress; },
   });
-  let counted = false;
+  let counted = false, badgesHidden = false;
+  const fmt = new Intl.NumberFormat('en-IN');
   gsap.ticker.add(() => {
-    const p = P.slice; if (p <= 0 || p >= 1) { badges.forEach(b => b.style.opacity = 0); return; }
+    const p = P.slice;
+    if (p <= 0 || p >= 1) { if (!badgesHidden) { badges.forEach(b => b.style.opacity = 0); badgesHidden = true; } return; }
+    badgesHidden = false;
     const show = smooth(.18, .32, p) * (1 - (mobile() ? smooth(.72, .84, p) : smooth(.86, .97, p)));
-    const R = mobile() ? Math.min(innerWidth * .36, 170) : Math.min(innerWidth * .21, 330);
+    const R = mobile() ? Math.min(VW * .36, 170) : Math.min(VW * .21, 330);
     const Ry = mobile() ? R * 1.05 : R * .62;
     badges.forEach((b, i) => {
       const a = i / badges.length * Math.PI * 2 + p * Math.PI * 1.6 + performance.now() * 0.00008;
-      const x = Math.cos(a) * R, y = Math.sin(a) * Ry + (mobile() ? innerHeight * .04 : 0);
+      const x = Math.cos(a) * R, y = Math.sin(a) * Ry + (mobile() ? VH * .04 : 0);
       const depth = (Math.sin(a) + 1) / 2;            // front when lower
       b.style.transform = `translate3d(${x}px,${y}px,0) scale(${(.75 + depth * .35) * (.4 + show * .6)}) rotate(${Math.cos(a) * 8}deg)`;
       b.style.opacity = show;
@@ -287,7 +292,7 @@ function initStory() {
     if (!counted && show > .5) {
       counted = true;
       const el = $('[data-count]'), o = { v: 0 };
-      gsap.to(o, { v: +el.dataset.count, duration: 1.8, ease: 'power2.out', onUpdate: () => el.textContent = Math.round(o.v).toLocaleString('en-IN') });
+      gsap.to(o, { v: +el.dataset.count, duration: 1.8, ease: 'power2.out', onUpdate: () => el.textContent = fmt.format(Math.round(o.v)) });
     }
   });
 
@@ -311,9 +316,11 @@ function initStory() {
       gsap.fromTo(['#capT', '#capN'], { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .45, stagger: .06, ease: 'expo.out' });
     } });
   }
+  let labelsHidden = false, lastBake = -1;
   gsap.ticker.add(() => {
     const l = P.layers;
-    if (l <= 0 || l >= 1 || !cake) { labels.forEach(li => li.style.opacity = 0); capEl.style.opacity = 0; return; }
+    if (l <= 0 || l >= 1 || !cake) { if (!labelsHidden) { labels.forEach(li => li.style.opacity = 0); capEl.style.opacity = 0; labelsHidden = true; } return; }
+    labelsHidden = false;
     const ex = cake.ex;
     const dys = { deco: 0.3, top: -0.12 };
     let prevY = -Infinity;
@@ -336,7 +343,8 @@ function initStory() {
     capEl.style.opacity = smooth(.36, .42, l) * (1 - smooth(.66, .72, l));
     const b = smooth(.1, .9, l);
     bakeFill.style.transform = `scaleX(${b})`;
-    bakeNum.textContent = String(Math.round(b * 100)).padStart(3, '0');
+    const bn = Math.round(b * 100);
+    if (bn !== lastBake) { lastBake = bn; bakeNum.textContent = String(bn).padStart(3, '0'); }
   });
   const ly = gsap.timeline({ scrollTrigger: { trigger: '#layers', start: 'top top', end: 'bottom bottom', scrub: 1 } });
   ly.fromTo('.layers__kicker', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .06 }, 0)
@@ -398,10 +406,17 @@ function initWall() {
   }
   const dist = () => track.scrollWidth - innerWidth;
   const imgs = cards.map(c => $('img', c));
+  let base = [], lastX = NaN;
+  const measure = () => {
+    const tx = gsap.getProperty(track, 'x');
+    cards.forEach(c => { c.style.transform = 'none'; });
+    base = cards.map(c => { const r = c.getBoundingClientRect(); return { l: r.left - tx, w: r.width }; });
+    lastX = NaN;
+  };
   const tween = gsap.to(track, {
     x: () => -dist(), ease: 'none',
     scrollTrigger: {
-      trigger: '#wall', start: 'top top', end: 'bottom bottom', scrub: 1, invalidateOnRefresh: true,
+      trigger: '#wall', start: 'top top', end: 'bottom bottom', scrub: .7, invalidateOnRefresh: true,
       onUpdate: s => {
         $('#wallBar').style.transform = `scaleX(${s.progress})`;
         const i = Math.round(s.progress * (cards.length - 2)) + 1;
@@ -412,12 +427,17 @@ function initWall() {
   // inner parallax + gentle swing from the track's motion (only while the wall is on screen)
   let wallOn = false;
   ScrollTrigger.create({ trigger: '#wall', start: 'top bottom', end: 'bottom top', onToggle: s => { wallOn = s.isActive; } });
+  measure(); ScrollTrigger.addEventListener('refresh', measure);
   gsap.ticker.add(() => {
     if (!wallOn) return;
-    const vw = innerWidth;
+    const tx = gsap.getProperty(track, 'x');
+    if (Math.abs(tx - lastX) < 0.1) return;   // track at rest: nothing to redraw
+    lastX = tx;
+    const vw = VW;
     cards.forEach((c, i) => {
-      const r = c.getBoundingClientRect(); if (r.right < -100 || r.left > vw + 100) return;
-      const k = ((r.left + r.width / 2) / vw - .5);
+      const b = base[i]; if (!b) return;
+      const left = b.l + tx; if (left + b.w < -100 || left > vw + 100) return;
+      const k = ((left + b.w / 2) / vw - .5);
       if (imgs[i]) imgs[i].style.transform = `translate3d(${k * -40}px,${-8 + k * 4}%,0) scale(1.08)`;
       c.style.transform = `rotate(${k * -3}deg) translateY(${Math.abs(k) * 30}px)`;
     });
@@ -475,11 +495,18 @@ function initReels() {
   gsap.from('.reels__quote', { x: 40, opacity: 0, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.reels__quote', start: 'top 85%' } });
 }
 function initStaticVideos() {
-  const io = new IntersectionObserver(es => es.forEach(e => {
-    const v = e.target;
-    if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else v.pause();
-  }), { threshold: .25 });
-  $$('.phone video').forEach(v => io.observe(v));
+  // phones decode one reel at a time (the most visible one); laptops play every reel on screen
+  const vids = $$('.phone video'), ratio = new Map();
+  const one = touch || mobile();
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => ratio.set(e.target, e.isIntersecting ? e.intersectionRatio : 0));
+    const best = one ? [...ratio].sort((a, b) => b[1] - a[1])[0] : null;
+    vids.forEach(v => {
+      const on = (ratio.get(v) || 0) >= .25 && (!one || v === best[0]);
+      if (on) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else if (!v.paused) v.pause();
+    });
+  }, { threshold: [0, .25, .5, .75, 1] });
+  vids.forEach(v => io.observe(v));
 }
 
 /* ---------------- order ---------------- */
@@ -510,19 +537,21 @@ function initFooter() {
   // sprinkles
   const cv = $('#sprinkles'), ctx = cv.getContext('2d'); const foot = $('.footer');
   const cols = ['#F2C3C8', '#C24E68', '#C29A55', '#FBF5EC', '#8FA77E', '#F3DFB8'];
-  let W = 0, H = 0, dpr = Math.min(devicePixelRatio, 1.5), bits = [], active = false;
-  const size = () => { W = foot.offsetWidth; H = foot.offsetHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  let W = 0, H = 0, dpr = Math.min(devicePixelRatio, 1.5), bits = [], active = false, settled = false;
+  const size = () => { settled = false; W = foot.offsetWidth; H = foot.offsetHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
   size(); addEventListener('resize', size);
-  const burst = (x, y, n = 36) => { for (let i = 0; i < n; i++) bits.push({ x, y, vx: (Math.random() - .5) * 9, vy: -Math.random() * 9 - 2, r: Math.random() * 6.28, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], l: 8 + Math.random() * 6, rest: false }); if (bits.length > 900) bits.splice(0, bits.length - 900); };
+  const burst = (x, y, n = 36) => { settled = false; for (let i = 0; i < n; i++) bits.push({ x, y, vx: (Math.random() - .5) * 9, vy: -Math.random() * 9 - 2, r: Math.random() * 6.28, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], l: 8 + Math.random() * 6, rest: false }); if (bits.length > 900) bits.splice(0, bits.length - 900); };
   foot.addEventListener('pointerdown', e => { if (e.target.closest('a,button')) return; const r = foot.getBoundingClientRect(); burst(e.clientX - r.left, e.clientY - r.top); });
   new IntersectionObserver(([e]) => { active = e.isIntersecting; if (active && !bits.length) { for (let k = 0; k < 5; k++) setTimeout(() => burst(W * (.15 + .7 * Math.random()), 80, 24), k * 260); } }).observe(foot);
   gsap.ticker.add(() => {
-    if (!active) return;
+    if (!active || settled) return;
     ctx.clearRect(0, 0, W, H);
+    let moving = 0;
     for (const b of bits) {
-      if (!b.rest) { b.vy += .32; b.x += b.vx; b.y += b.vy; b.r += b.vr; b.vx *= .99; if (b.y > H - 8) { b.y = H - 8; b.vy *= -.35; b.vx *= .6; if (Math.abs(b.vy) < 1) { b.rest = true; b.vy = 0; } } }
+      if (!b.rest) { moving++; b.vy += .32; b.x += b.vx; b.y += b.vy; b.r += b.vr; b.vx *= .99; if (b.y > H - 8) { b.y = H - 8; b.vy *= -.35; b.vx *= .6; if (Math.abs(b.vy) < 1) { b.rest = true; b.vy = 0; } } }
       ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.beginPath(); ctx.roundRect(-b.l / 2, -2, b.l, 4, 2); ctx.fill(); ctx.restore();
     }
+    if (!moving && bits.length) settled = true;
   });
 }
 
