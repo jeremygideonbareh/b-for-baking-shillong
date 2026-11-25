@@ -19,7 +19,7 @@ gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 ScrollTrigger.config({ ignoreMobileResize: true });
 
 // shared scroll progress read by the cake
-const P = { intro: reduced ? 1 : 0, hero: 0, slice: 0, layers: 0 };
+const P = { intro: reduced ? 1 : 0, hero: 0, slice: 0, layers: 0, exit: 0 };
 let cake = null;
 
 /* ---------------- smooth scroll ---------------- */
@@ -99,12 +99,11 @@ async function boot() {
   $$('.loader__svg path, .loader__svg circle').forEach(p => { const L = p.getTotalLength(); gsap.set(p, { strokeDasharray: L, strokeDashoffset: L }); });
   drawn.to('.ld-ring', { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut' })
        .to('.ld-b', { strokeDashoffset: 0, duration: 1.3, ease: 'power2.inOut' }, 0.15)
-       .to('.ld-whisk', { strokeDashoffset: 0, duration: 0.7, ease: 'power2.out' }, 0.9)
        .to('.loader__word', { opacity: 1, y: 0, duration: .8 }, 1.0);
 
   const counter = { v: 0 };
   const start = performance.now();
-  const failsafe = new Promise(r => setTimeout(r, 6500));
+  const failsafe = new Promise(r => setTimeout(r, 4200));
   const cakeReady = cake ? cake.ready.catch(() => {}) : Promise.resolve();
   let finished = false;
   Promise.race([Promise.all([cakeReady, new Promise(r => setTimeout(r, 1700))]), failsafe]).then(() => { finished = true; });
@@ -122,7 +121,11 @@ async function boot() {
   const out = gsap.timeline({ onComplete: () => { $('#loader').remove(); } });
   out.to('.loader__mark, .loader__count, .loader__note', { y: -40, opacity: 0, duration: .6, ease: 'power3.in', stagger: .05 })
      .to('#loader', { yPercent: -112, duration: 1.15, ease: 'expo.inOut' }, '-=.15')
-     .add(() => { html.classList.add('ready'); lenis?.start(); initAll(); heroIntro(); }, '-=.75');
+     .add(() => {
+       html.classList.add('ready'); lenis?.start(); initAll(); heroIntro();
+       // slow network: the GLB may still be loading; fade the cake in when it lands
+       if (cake && !cake.isReady) { gsap.set('#stage', { opacity: 0 }); cake.ready.then(() => gsap.to('#stage', { opacity: 1, duration: 1.2 })); }
+     }, '-=.75');
 }
 
 function heroIntro() {
@@ -137,7 +140,7 @@ function heroIntro() {
     .from('.note path', { strokeDasharray: 200, strokeDashoffset: 200, duration: 1, stagger: .15, ease: 'power2.out' }, 1.15)
     .from('.ticker', { yPercent: 120, duration: 1.2 }, .6)
     .from('.hero__scroll', { opacity: 0, duration: .8 }, 1.4)
-    .from('.nav', { yPercent: -120, duration: 1 }, .3);
+    .from('.nav__inner', { yPercent: -140, duration: 1, clearProps: 'transform' }, .3);
 }
 
 /* ---------------- everything after load ---------------- */
@@ -162,6 +165,7 @@ function initNav() {
     if (y < lastY - 4) nav.classList.remove('is-hidden');
     lastY = y;
     $('#trayBtn').classList.toggle('show', y > innerHeight * 0.8);
+    $('.mbar')?.classList.toggle('show', y > innerHeight * 0.6);
   };
   if (lenis) lenis.on('scroll', e => onScroll(e.scroll)); else addEventListener('scroll', () => onScroll(scrollY), { passive: true });
   $('#burger').addEventListener('click', () => {
@@ -184,7 +188,7 @@ function initCursor() {
   const c = $('.cursor'), dot = $('.cursor__dot'), ring = $('.cursor__ring'), label = $('.cursor__label');
   const dx = gsap.quickTo(dot, 'x', { duration: .12 }), dy = gsap.quickTo(dot, 'y', { duration: .12 });
   const rx = gsap.quickTo(ring, 'x', { duration: .45, ease: 'power3' }), ry = gsap.quickTo(ring, 'y', { duration: .45, ease: 'power3' });
-  addEventListener('pointermove', e => { dx(e.clientX); dy(e.clientY); rx(e.clientX); ry(e.clientY); });
+  addEventListener('pointermove', e => { c.classList.add('on'); dx(e.clientX); dy(e.clientY); rx(e.clientX); ry(e.clientY); });
   document.addEventListener('pointerover', e => {
     const t = e.target.closest('[data-cursor]');
     if (t) { label.textContent = t.dataset.cursor; c.classList.add('is-label'); } else c.classList.remove('is-label');
@@ -216,6 +220,7 @@ function initBlossomLife() {
   // hero content parallax out
   gsap.to('.hero__inner', { yPercent: -18, opacity: .2, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
   gsap.to('.note', { y: -80, opacity: 0, ease: 'none', scrollTrigger: { trigger: '.hero', start: '20% top', end: '70% top', scrub: true } });
+  gsap.to('.ticker', { yPercent: 160, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: '30% top', scrub: true } });
   gsap.to('.blossom', { yPercent: -30, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
 }
 
@@ -246,6 +251,7 @@ function initStory() {
   ScrollTrigger.create({ trigger: '.hero', start: 'top top', end: 'bottom top', onUpdate: s => { P.hero = s.progress; } });
   ScrollTrigger.create({ trigger: '#slice', start: 'top top', end: 'bottom bottom', onUpdate: s => { P.slice = s.progress; } });
   ScrollTrigger.create({ trigger: '#layers', start: 'top top', end: 'bottom bottom', onUpdate: s => { P.layers = s.progress; } });
+  ScrollTrigger.create({ trigger: '#statement', start: 'top bottom', end: 'top 15%', onUpdate: s => { P.exit = s.progress; } });
 
   // slice: words part to make room for the slice, badges orbit
   const sl = gsap.timeline({ scrollTrigger: { trigger: '#slice', start: 'top top', end: 'bottom bottom', scrub: 1 } });
@@ -254,7 +260,7 @@ function initStory() {
     .fromTo('.slice__copy', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: .2 }, .2)
     .to('.slice__title, .slice__copy', { opacity: 0, y: -40, duration: .15 }, .85);
 
-  const badges = $$('.badge');
+  const badges = $$('#orbitBack .badge'); const back = $('#orbitBack'), front = $('#orbitFront');
   const orbit = { a: 0 };
   ScrollTrigger.create({
     trigger: '#slice', start: 'top top', end: 'bottom bottom',
@@ -262,7 +268,7 @@ function initStory() {
   });
   let counted = false;
   gsap.ticker.add(() => {
-    const p = P.slice; if (p <= 0 || p >= 1) { if (p >= 1 || p <= 0) badges.forEach(b => b.style.opacity = 0); return; }
+    const p = P.slice; if (p <= 0 || p >= 1) { badges.forEach(b => b.style.opacity = 0); return; }
     const show = smooth(.18, .32, p) * (1 - smooth(.86, .97, p));
     const R = mobile() ? Math.min(innerWidth * .36, 170) : Math.min(innerWidth * .21, 330);
     const Ry = mobile() ? R * 1.05 : R * .62;
@@ -272,7 +278,8 @@ function initStory() {
       const depth = (Math.sin(a) + 1) / 2;            // front when lower
       b.style.transform = `translate3d(${x}px,${y}px,0) scale(${(.75 + depth * .35) * (.4 + show * .6)}) rotate(${Math.cos(a) * 8}deg)`;
       b.style.opacity = show;
-      b.style.zIndex = depth > .5 ? 6 : 1;
+      const want = depth > .5 ? front : back;            // pass in front of / behind the 3D cake
+      if (b.parentNode !== want) want.append(b);
     });
     if (!counted && show > .5) {
       counted = true;
@@ -283,6 +290,8 @@ function initStory() {
 
   // layers: labels follow the exploded cake
   const labels = $$('.labels li');
+  let heights = labels.map(li => li.offsetHeight);
+  addEventListener('resize', () => { heights = labels.map(li => li.offsetHeight); });
   const bakeFill = $('#bakeFill'), bakeNum = $('#bakeNum');
   gsap.ticker.add(() => {
     const l = P.layers;
@@ -293,12 +302,17 @@ function initStory() {
     labels.forEach((li, i) => {
       const pos = cake.project(li.dataset.layer, dys[li.dataset.layer] || 0, mobile() ? 1.05 : 1.25);
       if (!pos) return;
-      const hgt = li.offsetHeight;
+      const hgt = heights[i] || 30;
       let y = pos.y - hgt / 2;
       y = Math.max(y, prevY + hgt + 8); prevY = y;          // never let two labels overlap
       const o = smooth(.5 + i * .05, .75 + i * .04, ex);
       li.style.opacity = o;
       li.style.transform = `translate3d(${pos.x}px,${y}px,0) translateX(${(1 - o) * 30}px)`;
+      // walk through the layers one at a time while the cake is apart
+      const k = (l - .4) / .28;
+      const act = k >= 0 && k < 1 ? Math.floor(k * labels.length) : -1;
+      li.classList.toggle('is-active', act === i);
+      li.classList.toggle('is-dim', act >= 0 && act !== i);
     });
     const b = smooth(.1, .9, l);
     bakeFill.style.transform = `scaleX(${b})`;
@@ -375,8 +389,11 @@ function initWall() {
       },
     },
   });
-  // inner parallax + gentle swing from the track's motion
+  // inner parallax + gentle swing from the track's motion (only while the wall is on screen)
+  let wallOn = false;
+  ScrollTrigger.create({ trigger: '#wall', start: 'top bottom', end: 'bottom top', onToggle: s => { wallOn = s.isActive; } });
   gsap.ticker.add(() => {
+    if (!wallOn) return;
     const vw = innerWidth;
     cards.forEach((c, i) => {
       const r = c.getBoundingClientRect(); if (r.right < -100 || r.left > vw + 100) return;
@@ -504,7 +521,7 @@ function initTray() {
   let items = [];
   try { items = JSON.parse(localStorage.getItem('bfb-enquiry') || '[]'); } catch (e) {}
   const render = () => {
-    count.textContent = items.length;
+    count.textContent = items.length; btn.classList.toggle('has-items', items.length > 0);
     list.innerHTML = items.length ? items.map((it, i) => `<li>${it}<button aria-label="Remove ${it}" data-rm="${i}">×</button></li>`).join('') : '<li class="tray__empty">Nothing yet. Tap <b>+</b> on an occasion.</li>';
     $$('.occ').forEach(o => o.classList.toggle('added', items.includes(o.dataset.item)));
     try { localStorage.setItem('bfb-enquiry', JSON.stringify(items)); } catch (e) {}
@@ -517,8 +534,11 @@ function initTray() {
   const toggle = open => {
     const isOpen = open ?? tray.hidden;
     tray.hidden = !isOpen; btn.setAttribute('aria-expanded', isOpen);
-    if (isOpen && !reduced) gsap.from(tray, { scale: .85, opacity: 0, y: 20, duration: .5, ease: 'back.out(1.8)' });
+    if (isOpen) { if (!reduced) gsap.from(tray, { scale: .85, opacity: 0, y: 20, duration: .5, ease: 'back.out(1.8)' }); setTimeout(() => $('#trayDate').focus(), 60); }
+    else btn.focus();
   };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tray.hidden) toggle(false); });
+  const tm = new Date(Date.now() + 864e5); $('#trayDate').min = tm.toISOString().slice(0, 10);
   btn.addEventListener('click', () => toggle());
   $('#trayClose').addEventListener('click', () => toggle(false));
   list.addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { items.splice(+b.dataset.rm, 1); render(); } });

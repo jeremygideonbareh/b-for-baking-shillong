@@ -2,6 +2,25 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+// crumb speckle for the sponge, from object-space value noise (the Blender mesh has no UVs)
+function crumb(mat) {
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vObjP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObjP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vObjP;
+float h3(vec3 p){ p = fract(p*0.3183099+.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float n3(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+  return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float c = n3(vObjP*38.0)*.6 + n3(vObjP*90.0)*.4;
+diffuseColor.rgb *= .82 + .3*c;
+diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*vec3(1.05,.93,.8), smoothstep(.62,.8,c));`);
+  };
+}
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -13,7 +32,7 @@ export function initCake({ canvas, P, onProgress }) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.25 : 1.75));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.12;
 
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -35,18 +54,30 @@ export function initCake({ canvas, P, onProgress }) {
 
   const parts = { layers: [], wedges: [], shell: [], top: [], deco: [], drip: [] };
   const state = { x: 0, y: 4, s: 1, rot: 0, tilt: 0, wedge: 0, ex: 0, camY: 2, dist: 9, op: 1 };
+  const physCache = {};
   const pointer = { x: 0, y: 0 };
   addEventListener('pointermove', e => { pointer.x = e.clientX / innerWidth - .5; pointer.y = e.clientY / innerHeight - .5; }, { passive: true });
 
   let ready = false, visible = true, raf = 0, last = performance.now(), t = 0;
   const loader = new GLTFLoader();
+  const draco = new DRACOLoader(); draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/'); loader.setDRACOLoader(draco);
   const done = new Promise((resolve, reject) => {
     loader.load('assets/3d/cake.glb', gltf => {
       const model = gltf.scene;
       model.traverse(o => {
         if (!o.isMesh) return;
         const n = o.name;
-        o.material.envMapIntensity = 0.9;
+        const mn = o.material.name || '';
+        if (/Frosting|Drip|Cream/.test(mn)) {
+          if (!physCache[mn]) {
+            const src = o.material;
+            physCache[mn] = new THREE.MeshPhysicalMaterial({ color: src.color, roughness: /Drip/.test(mn) ? 0.22 : 0.42, sheen: 0.7, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe9ec'), clearcoat: /Drip/.test(mn) ? 0.7 : 0.08, clearcoatRoughness: 0.35, name: mn });
+          }
+          o.material = physCache[mn];
+        }
+        if (/Sponge/.test(mn) && !o.material.userData.crumb) { o.material.userData.crumb = 1; crumb(o.material); }
+        if (/Gold/.test(mn)) { o.material.color.set('#b8863c'); o.material.metalness = 1; o.material.roughness = 0.3; }
+        o.material.envMapIntensity = /Gold/.test(mn) ? 1.0 : 0.95;
         if (/^Shell/.test(n)) { o.material = o.material.clone(); o.material.transparent = true; parts.shell.push(o); }
         const m = n.match(/^L(\d)_/);
         if (m) parts.layers.push({ o, i: +m[1], y0: o.position.y });
@@ -72,7 +103,7 @@ export function initCake({ canvas, P, onProgress }) {
     const intro = P.intro, h = P.hero, s = P.slice, l = P.layers;
     // fit: narrow viewports see less width, so shrink the cake with the aspect ratio
     const fit = clamp(camera.aspect / 1.45, 0.36, 1);
-    const heroX = mobile ? 0 : 1.5, heroY = mobile ? -1.2 : -0.2;
+    const heroX = mobile ? 0 : 1.5, heroY = mobile ? -1.0 : -0.2;
     const heroS = mobile ? 1.55 * fit : 0.95 * fit;
     const sliceIn = smooth(0, 0.18, s);
     const wedgeOut = smooth(0.1, 0.42, s) * (1 - smooth(0.0, 0.12, l));
@@ -81,17 +112,21 @@ export function initCake({ canvas, P, onProgress }) {
     const endShrink = smooth(0.84, 0.96, l);
     let x = mix(heroX, 0, smooth(0, 1, h));
     x = mix(x, mobile ? -0.42 : -1.05, layerShift);
-    let y = mix(heroY, mobile ? -0.15 : -0.25, smooth(0, 1, h)) + (1 - intro) * 4;
+    let y = mix(heroY, mobile ? 0.2 : -0.25, smooth(0, 1, h)) + (1 - intro) * 4;
     y = mix(y, mobile ? -1.05 : -1.15, ex);
     y = mix(y, mobile ? 0.15 : 0, endShrink);
     let sc = mix(heroS, mobile ? 1.2 * fit : 0.8 * fit, smooth(0, 1, h)) * mix(1, mobile ? 1.05 : 0.78, ex);
     sc *= mix(1, mobile ? 0.85 : 0.72, endShrink);
+    // hand-off: as the pink statement rises, the cake lifts away up and to the left
+    const ext = smooth(0, 1, P.exit || 0);
+    x = mix(x, mobile ? -0.3 : -1.6, ext); y += ext * 3.2; sc *= 1 - ext * 0.45;
     const osc = Math.sin(t * 0.45) * 0.35;
     let rot = osc + pointer.x * 0.35 + h * 1.2 + (1 - intro) * -3.2;
     const sliceRot = -0.55 + Math.sin(t * 0.4) * 0.06 + pointer.x * 0.15;
     const focus = sliceIn * (1 - smooth(0.02, 0.18, l));
     rot = mix(rot, sliceRot, focus);
     rot = mix(rot, -0.55 + (l - 0.15) * 1.4 + pointer.x * 0.2, smooth(0.02, 0.18, l));
+    rot += smooth(0, 1, P.exit || 0) * 2.4;
     return {
       x, y, s: sc, rot,
       tilt: pointer.y * 0.08,
@@ -163,6 +198,7 @@ export function initCake({ canvas, P, onProgress }) {
 
   return {
     ready: done,
+    get isReady() { return ready; },
     project,
     get ex() { return state.ex; },
     setVisible(vis) { visible = vis; },

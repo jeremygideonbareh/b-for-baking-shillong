@@ -31,7 +31,6 @@
     <svg viewBox="0 0 120 120" class="loader__svg">
       <circle class="ld-ring" cx="60" cy="60" r="54"/>
       <path class="ld-b" d="M46 30 C46 30 46 90 46 90 M46 32 C66 28 78 34 76 46 C74 56 60 58 48 58 C66 56 84 60 82 74 C80 88 62 92 46 88"/>
-      <path class="ld-whisk" d="M90 22 l-14 14 M84 18 c6 2 10 6 12 12"/>
     </svg>
     <p class="loader__word">B for Baking</p>
   </div>
@@ -41,7 +40,7 @@
 </div>
 
 <!-- ========== NAV ========== -->
-<header class="nav" id="nav">
+<header class="nav" id="nav"><div class="nav__inner">
   <a class="nav__logo" href="#top" aria-label="B for Baking home"><span class="script">B for Baking</span></a>
   <nav class="nav__links" aria-label="Sections">
     <a href="#wall" data-magnetic>Cakes</a>
@@ -50,14 +49,21 @@
     <a href="#order" data-magnetic>Order</a>
   </nav>
   <a class="btn btn--ink nav__cta" href="tel:+917005246168" data-magnetic><span>Call to order</span></a>
-  <button class="nav__burger" id="burger" aria-label="Open menu" aria-expanded="false"><i></i><i></i></button>
-</header>
+  <button class="nav__burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><i></i><i></i></button>
+</div></header>
 <div class="drawer" id="drawer" hidden>
   <a href="#wall">The cake wall</a><a href="#occasions">Occasions</a><a href="#reels">Hampers &amp; reels</a><a href="#order">How to order</a>
   <a class="btn btn--ink" href="tel:+917005246168"><span>Call 7005246168</span></a>
 </div>
 
-<!-- fixed 3D stage -->
+<!-- fixed 3D stage, with orbit layers behind and in front of it -->
+<div class="orbit-layer orbit-layer--back" id="orbitBack" aria-hidden="true">
+  <div class="badge badge--1"><b>100%</b><span>eggless</span></div>
+  <div class="badge badge--2"><b>Custom</b><span>every order</span></div>
+  <div class="badge badge--3"><b data-count="9087">0</b><span>followers</span></div>
+  <div class="badge badge--4"><b>Gift</b><span>hampers</span></div>
+</div>
+<div class="orbit-layer orbit-layer--front" id="orbitFront" aria-hidden="true"></div>
 <div class="stage" id="stage" aria-hidden="true">
   <canvas id="cakeCanvas"></canvas>
   <img class="stage__poster" src="assets/3d/cake-poster.webp" alt="">
@@ -101,19 +107,16 @@
       <span class="slice__r">a different <em>story.</em></span>
     </h2>
     <p class="slice__copy">No two orders look alike. A 1 kg rose-vine cake, a light-up wedding tower, a hamper for an anniversary: each one is drawn up around a single moment.</p>
-    <div class="orbit" aria-hidden="true">
-      <div class="badge badge--1"><b>100%</b><span>eggless</span></div>
-      <div class="badge badge--2"><b>Custom</b><span>every order</span></div>
-      <div class="badge badge--3"><b data-count="9087">0</b><span>followers</span></div>
-      <div class="badge badge--4"><b>Gift</b><span>hampers</span></div>
-    </div>
+    <ul class="slice__facts">
+      <li>100% eggless</li><li>Customised for every order</li><li>9,087 followers in Shillong and beyond</li><li>Gift hampers</li>
+    </ul>
   </div>
 </section>
 
 <!-- ========== LAYERS (sticky) ========== -->
 <section class="layers" id="layers" data-tone="#FBF5EC">
   <div class="sticky">
-    <p class="layers__kicker eyebrow">Inside one of our cakes</p>
+    <p class="layers__kicker"><span class="eyebrow">Inside one of our cakes</span><span class="layers__h">Five layers,<br><em>one bite.</em></span></p>
     <p class="layers__big" aria-hidden="true"><span>Love,</span><span>layer by layer.</span></p>
     <ul class="labels" aria-label="What goes into a cake">
       <li data-layer="deco"><span>piped roses &amp; gold pearls</span></li>
@@ -161,7 +164,6 @@
       <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/rainbow-s.webp" alt="Two-tier pink cake with a rainbow topper and a gold number two" loading="lazy"></div><figcaption><b>Rainbow for two</b><span>a second birthday</span></figcaption></figure>
       <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/teddy-s.webp" alt="Two-tier white cake with a fondant teddy bear on top" loading="lazy"></div><figcaption><b>Little teddy</b><span>eleven months old</span></figcaption></figure>
       <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/ink-gold-s.webp" alt="White cake with black brush strokes and gold leaf and a gold topper" loading="lazy"></div><figcaption><b>Ink &amp; gold</b><span>brush-stroke finish</span></figcaption></figure>
-      <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/lv-s.webp" alt="Brown monogram-print cake with gold piping and a gold initial topper" loading="lazy"></div><figcaption><b>Monogram luxe</b><span>print · gold bead piping</span></figcaption></figure>
       <figure class="card" data-cursor="Love"><div class="card__img"><img src="assets/img/noir-cross-s.webp" alt="Black vintage-piped cake with a white cross on top" loading="lazy"></div><figcaption><b>Noir vintage piping</b><span>all black · white cross</span></figcaption></figure>
       <a class="card card--end" href="https://www.instagram.com/b_for_baking/" target="_blank" rel="noopener" data-cursor="Open"><span class="script">see more</span><b>@b_for_baking</b><i>→</i></a>
     </div>
@@ -199,8 +201,7 @@
       <figure class="pol"><img src="assets/img/hamper-ferrero-2-s.webp" alt=""><figcaption>photo hamper</figcaption></figure>
       <figure class="pol"><img src="assets/img/pink-bow-2-s.webp" alt=""><figcaption>bow on top</figcaption></figure>
       <figure class="pol"><img src="assets/img/noir-cross-2-s.webp" alt=""><figcaption>noir piping</figcaption></figure>
-      <figure class="pol"><img src="assets/img/blue-gold-2-s.webp" alt=""><figcaption>midnight &amp; gold</figcaption></figure>
-    </div>
+      <figure class="pol"><img src="assets/img/blue-gold-2-s.webp" alt=""><figcaption>midnight &amp; gold</figcaption></figure>    </div>
   </div>
 </section>
 
@@ -274,11 +275,15 @@
 </footer>
 
 <!-- ========== ENQUIRY TRAY ========== -->
-<button class="tray-btn" id="trayBtn" aria-controls="tray" aria-expanded="false" data-magnetic><span class="tray-btn__ico">🎂</span><span>Your enquiry</span><b id="trayCount">0</b></button>
-<aside class="tray" id="tray" aria-label="Your enquiry" hidden>
-  <div class="tray__head"><h3>Your enquiry</h3><button class="tray__close" id="trayClose" aria-label="Close">×</button></div>
+<button class="tray-btn" id="trayBtn" aria-controls="tray" aria-expanded="false" data-magnetic><span class="tray-btn__ico" aria-hidden="true">🎂</span><span>Enquiry</span><b id="trayCount">0</b></button>
+<nav class="mbar" aria-label="Quick order">
+  <a class="mbar__wa" href="https://wa.me/917005246168?text=Hi%20B%20for%20Baking!%20I%27d%20like%20to%20order%20a%20cake." target="_blank" rel="noopener">WhatsApp us</a>
+  <a class="mbar__call" href="tel:+917005246168">Call</a>
+</nav>
+<aside class="tray" id="tray" role="dialog" aria-modal="false" aria-labelledby="trayTitle" hidden>
+  <div class="tray__head"><h3 id="trayTitle">Your enquiry</h3><button class="tray__close" id="trayClose" aria-label="Close">×</button></div>
   <ul class="tray__list" id="trayList"><li class="tray__empty">Nothing yet. Tap <b>+</b> on an occasion.</li></ul>
-  <label class="tray__field">Date needed<input type="date" id="trayDate"></label>
+  <label class="tray__field">Date needed<input type="date" id="trayDate"><small>Custom cakes need a little notice. Lead time to confirm with the bakery.</small></label>
   <label class="tray__field">Notes (size, flavour, message)<textarea id="trayNotes" rows="3" placeholder="e.g. 1 kg, chocolate, “Happy 30th Ria”"></textarea></label>
   <a class="btn btn--ink" id="traySend" href="#" target="_blank" rel="noopener"><span>Send on WhatsApp</span></a>
   <p class="tray__small">Opens WhatsApp with your list pre-written. Nothing is sent until you press send.</p>
