@@ -166,6 +166,7 @@ function initNav() {
     lastY = y;
     $('#trayBtn').classList.toggle('show', y > innerHeight * 0.8);
     $('.mbar')?.classList.toggle('show', y > innerHeight * 0.6);
+    const ft = $('#footer').getBoundingClientRect().top; $('.mbar')?.classList.toggle('over-footer', ft < innerHeight * 0.7);
   };
   if (lenis) lenis.on('scroll', e => onScroll(e.scroll)); else addEventListener('scroll', () => onScroll(scrollY), { passive: true });
   $('#burger').addEventListener('click', () => {
@@ -258,8 +259,10 @@ function initStory() {
   sl.fromTo('.slice__l', { x: () => mobile() ? 0 : innerWidth * .06, opacity: 0 }, { x: () => mobile() ? 0 : -innerWidth * .02, opacity: 1, duration: .25 }, 0)
     .fromTo('.slice__r', { x: () => mobile() ? 0 : -innerWidth * .06, opacity: 0 }, { x: () => mobile() ? 0 : innerWidth * .02, opacity: 1, duration: .25 }, .03)
     .fromTo('.slice__copy', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: .2 }, .2)
-    .to('.slice__title, .slice__copy', { opacity: 0, y: -40, duration: .15 }, .85);
+    .to('.slice__title, .slice__copy', { opacity: 0, y: -40, duration: .1 }, .9);
 
+  const bigEl = $('.layers__big');
+  gsap.ticker.add(() => { if (P.exit > 0 && P.exit < 1) bigEl.style.setProperty('--exitFade', String(1 - smooth(0, .3, P.exit))); });
   const badges = $$('#orbitBack .badge'); const back = $('#orbitBack'), front = $('#orbitFront');
   const orbit = { a: 0 };
   ScrollTrigger.create({
@@ -269,7 +272,7 @@ function initStory() {
   let counted = false;
   gsap.ticker.add(() => {
     const p = P.slice; if (p <= 0 || p >= 1) { badges.forEach(b => b.style.opacity = 0); return; }
-    const show = smooth(.18, .32, p) * (1 - smooth(.86, .97, p));
+    const show = smooth(.18, .32, p) * (1 - (mobile() ? smooth(.72, .84, p) : smooth(.86, .97, p)));
     const R = mobile() ? Math.min(innerWidth * .36, 170) : Math.min(innerWidth * .21, 330);
     const Ry = mobile() ? R * 1.05 : R * .62;
     badges.forEach((b, i) => {
@@ -293,9 +296,24 @@ function initStory() {
   let heights = labels.map(li => li.offsetHeight);
   addEventListener('resize', () => { heights = labels.map(li => li.offsetHeight); });
   const bakeFill = $('#bakeFill'), bakeNum = $('#bakeNum');
+  const capEl = $('.layer-cap'); let capIdx = -1;
+  const CAPS = {
+    deco: ['Finished by hand', 'piped roses, gold pearls, fresh berries'],
+    top: ['The drip', 'a blush glaze over silky frosting'],
+    cream: ['Light as air', 'whipped cream between the layers'],
+    jam: ['A little tang', 'berry jam to balance the sweet'],
+    sponge: ['Soft & eggless', 'the sponge everything sits on'],
+  };
+  function setCap(key, i) {
+    const [t, n] = CAPS[key];
+    gsap.to(['#capT', '#capN'], { y: -14, opacity: 0, duration: .18, stagger: .04, onComplete: () => {
+      $('#capT').textContent = t; $('#capN').textContent = n; $('#capK').textContent = String(5 - i).padStart(2, '0') + ' / 05';
+      gsap.fromTo(['#capT', '#capN'], { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: .45, stagger: .06, ease: 'expo.out' });
+    } });
+  }
   gsap.ticker.add(() => {
     const l = P.layers;
-    if (l <= 0 || l >= 1 || !cake) { labels.forEach(li => li.style.opacity = 0); return; }
+    if (l <= 0 || l >= 1 || !cake) { labels.forEach(li => li.style.opacity = 0); capEl.style.opacity = 0; return; }
     const ex = cake.ex;
     const dys = { deco: 0.3, top: -0.12 };
     let prevY = -Infinity;
@@ -312,14 +330,16 @@ function initStory() {
       const k = (l - .4) / .28;
       const act = k >= 0 && k < 1 ? Math.floor(k * labels.length) : -1;
       li.classList.toggle('is-active', act === i);
+      if (act === i && capIdx !== i) { capIdx = i; setCap(li.dataset.layer, i); }
       li.classList.toggle('is-dim', act >= 0 && act !== i);
     });
+    capEl.style.opacity = smooth(.36, .42, l) * (1 - smooth(.66, .72, l));
     const b = smooth(.1, .9, l);
     bakeFill.style.transform = `scaleX(${b})`;
     bakeNum.textContent = String(Math.round(b * 100)).padStart(3, '0');
   });
   const ly = gsap.timeline({ scrollTrigger: { trigger: '#layers', start: 'top top', end: 'bottom bottom', scrub: 1 } });
-  ly.fromTo('.layers__kicker', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .08 }, .08)
+  ly.fromTo('.layers__kicker', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .06 }, 0)
     .fromTo('.bake', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .08 }, .1)
     .to('.layers__kicker, .bake', { opacity: 0, duration: .06 }, .84)
     .fromTo('.layers__big', { opacity: 0, scale: .9 }, { opacity: 1, scale: 1, duration: .12 }, .86)
@@ -353,7 +373,7 @@ function initStatement() {
   });
   p.setAttribute('aria-label', p.textContent.replace(/\s+/g, ' ').trim());
   gsap.to(units, { opacity: 1, stagger: .1, ease: 'none', scrollTrigger: { trigger: '#statement', start: 'top 70%', end: 'bottom 75%', scrub: true } });
-  gsap.from($$('.chip', p), { scale: .6, rotate: -12, ease: 'back.out(3)', stagger: .2, scrollTrigger: { trigger: p, start: 'top 75%', end: 'bottom 45%', scrub: true } });
+  gsap.from($$('.chip', p), { y: 14, rotate: -8, backgroundColor: 'rgba(255,255,255,0)', boxShadow: '0 0 0 rgba(0,0,0,0)', ease: 'power2.out', stagger: .2, scrollTrigger: { trigger: p, start: 'top 75%', end: 'bottom 50%', scrub: true } });
   $$('.doodle').forEach((d, i) => {
     const L = $('path', d).getTotalLength();
     gsap.fromTo($('path', d), { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, ease: 'none', scrollTrigger: { trigger: '#statement', start: 'top 80%', end: 'center center', scrub: true } });
@@ -433,7 +453,7 @@ function initMoments() {
     pols.forEach((p, i) => gsap.set(p, { xPercent: -50, yPercent: -50, x: fan[i].x, y: fan[i].y, rotate: fan[i].r }));
     gsap.from(pols, { x: (i) => from[i].x * .5, y: (i) => from[i].y * .4, rotate: (i) => from[i].r, opacity: 0, stagger: .08, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: '.polaroids', start: 'top 85%' } });
   } else {
-    const tl = gsap.timeline({ scrollTrigger: { trigger: '#moments', start: 'top top', end: 'bottom bottom', scrub: 1 } });
+    const tl = gsap.timeline({ scrollTrigger: { trigger: '#moments', start: 'top 55%', end: 'bottom bottom', scrub: 1 } });
     pols.forEach((p, i) => {
       tl.fromTo(p, { xPercent: -50, yPercent: -50, x: from[i].x, y: from[i].y, rotate: from[i].r, opacity: 0 },
         { x: fan[i].x, y: fan[i].y, rotate: fan[i].r, opacity: 1, ease: 'power3.out', duration: .3 }, i * .07);
@@ -521,7 +541,7 @@ function initTray() {
   let items = [];
   try { items = JSON.parse(localStorage.getItem('bfb-enquiry') || '[]'); } catch (e) {}
   const render = () => {
-    count.textContent = items.length; btn.classList.toggle('has-items', items.length > 0);
+    count.textContent = items.length; btn.classList.toggle('has-items', items.length > 0); $('#trayLabel').textContent = items.length ? 'Enquiry' : 'Order';
     list.innerHTML = items.length ? items.map((it, i) => `<li>${it}<button aria-label="Remove ${it}" data-rm="${i}">×</button></li>`).join('') : '<li class="tray__empty">Nothing yet. Tap <b>+</b> on an occasion.</li>';
     $$('.occ').forEach(o => o.classList.toggle('added', items.includes(o.dataset.item)));
     try { localStorage.setItem('bfb-enquiry', JSON.stringify(items)); } catch (e) {}
@@ -538,7 +558,7 @@ function initTray() {
     else btn.focus();
   };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tray.hidden) toggle(false); });
-  const tm = new Date(Date.now() + 864e5); $('#trayDate').min = tm.toISOString().slice(0, 10);
+  const tm = new Date(Date.now() + 864e5); $('#trayDate').min = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
   btn.addEventListener('click', () => toggle());
   $('#trayClose').addEventListener('click', () => toggle(false));
   list.addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { items.splice(+b.dataset.rm, 1); render(); } });

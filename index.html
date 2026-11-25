@@ -19,8 +19,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght,SOFT@9..144,500..900,100&display=swap" rel="stylesheet">
 <link rel="preload" href="assets/3d/cake.glb" as="fetch" crossorigin>
+<link rel="modulepreload" href="vendor/three.module.min.js">
+<link rel="modulepreload" href="js/cake.js">
 <link rel="stylesheet" href="css/style.css">
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/jsm/"}}</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -58,7 +60,7 @@
 
 <!-- fixed 3D stage, with orbit layers behind and in front of it -->
 <div class="orbit-layer orbit-layer--back" id="orbitBack" aria-hidden="true">
-  <div class="badge badge--1"><b>100%</b><span>eggless</span></div>
+  <div class="badge badge--1"><b>Eggless</b><span>cakes</span></div>
   <div class="badge badge--2"><b>Custom</b><span>every order</span></div>
   <div class="badge badge--3"><b data-count="9087">0</b><span>followers</span></div>
   <div class="badge badge--4"><b>Gift</b><span>hampers</span></div>
@@ -89,13 +91,13 @@
       <a class="btn btn--ghost" href="#wall" data-magnetic><span>See the cakes</span></a>
     </div>
   </div>
-  <div class="note note--a" aria-hidden="true"><span>100% eggless</span>
+  <div class="note note--a" aria-hidden="true"><span>eggless cakes</span>
     <svg viewBox="0 0 120 70"><path d="M6 10 C40 6 80 20 104 58 M104 58 l-14 -4 M104 58 l2 -14"/></svg></div>
   <div class="note note--b" aria-hidden="true">
     <svg viewBox="0 0 120 70"><path d="M114 60 C80 64 30 50 14 12 M14 12 l-2 14 M14 12 l12 6"/></svg><span>made to order<br>in Shillong</span></div>
   <div class="hero__scroll" aria-hidden="true"><span>scroll to slice</span><i></i></div>
   <div class="ticker" aria-hidden="true"><div class="ticker__row" data-velocity>
-    <span>Custom cakes</span><b>✿</b><span>100% eggless</span><b>✿</b><span>Gift hampers</span><b>✿</b><span>Wedding tiers</span><b>✿</b><span>Birthdays</span><b>✿</b><span>Paid delivery in Shillong</span><b>✿</b>
+    <span>Custom cakes</span><b>✿</b><span>Eggless cakes</span><b>✿</b><span>Gift hampers</span><b>✿</b><span>Wedding tiers</span><b>✿</b><span>Birthdays</span><b>✿</b><span>Paid delivery in Shillong</span><b>✿</b>
   </div></div>
 </section>
 
@@ -108,7 +110,7 @@
     </h2>
     <p class="slice__copy">No two orders look alike. A 1 kg rose-vine cake, a light-up wedding tower, a hamper for an anniversary: each one is drawn up around a single moment.</p>
     <ul class="slice__facts">
-      <li>100% eggless</li><li>Customised for every order</li><li>9,087 followers in Shillong and beyond</li><li>Gift hampers</li>
+      <li>Eggless cakes</li><li>Customised for every order</li><li>9,087 followers in Shillong and beyond</li><li>Gift hampers</li>
     </ul>
   </div>
 </section>
@@ -116,7 +118,7 @@
 <!-- ========== LAYERS (sticky) ========== -->
 <section class="layers" id="layers" data-tone="#FBF5EC">
   <div class="sticky">
-    <p class="layers__kicker"><span class="eyebrow">Inside one of our cakes</span><span class="layers__h">Five layers,<br><em>one bite.</em></span></p>
+    <p class="layers__kicker"><span class="eyebrow">Anatomy of a celebration cake</span><span class="layers__h">Five layers,<br><em>one bite.</em></span></p>
     <p class="layers__big" aria-hidden="true"><span>Love,</span><span>layer by layer.</span></p>
     <ul class="labels" aria-label="What goes into a cake">
       <li data-layer="deco"><span>piped roses &amp; gold pearls</span></li>
@@ -125,6 +127,7 @@
       <li data-layer="jam"><span>berry jam</span></li>
       <li data-layer="sponge"><span>soft, eggless sponge</span></li>
     </ul>
+    <div class="layer-cap" aria-live="polite"><p class="layer-cap__k" id="capK">05</p><p class="layer-cap__t" id="capT">Finished by hand</p><p class="layer-cap__n" id="capN">piped roses, gold pearls, fresh berries</p></div>
     <div class="bake" aria-hidden="true">
       <span>Batter</span><div class="bake__bar"><i id="bakeFill"></i></div><span>Baked</span><b id="bakeNum">000</b>
     </div>
@@ -213,10 +216,10 @@
     <blockquote class="reels__quote">“Hampers under <b>₹2000</b>, we have got you covered.” <cite>— from our Instagram</cite></blockquote>
   </div>
   <div class="phones">
-    <figure class="phone" data-speed="-60"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-roses.jpg" data-src="assets/video/reel-roses.mp4"></video></div><figcaption>The “Ate Teen” cake, 1 kg</figcaption></figure>
-    <figure class="phone" data-speed="50"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-hamper.jpg" data-src="assets/video/reel-hamper.mp4"></video></div><figcaption>An anniversary hamper</figcaption></figure>
-    <figure class="phone" data-speed="-40"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-2d.jpg" data-src="assets/video/reel-2d.mp4"></video></div><figcaption>A “2D” cake, drawn in icing</figcaption></figure>
-    <figure class="phone" data-speed="70"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-orders.jpg" data-src="assets/video/reel-orders.mp4"></video></div><figcaption>One day's orders, boxed up</figcaption></figure>
+    <figure class="phone" data-speed="-60"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-roses.jpg" data-src="assets/video/reel-roses.mp4"></video></div><figcaption>“Ate Teen”, 1 kg</figcaption></figure>
+    <figure class="phone" data-speed="50"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-hamper.jpg" data-src="assets/video/reel-hamper.mp4"></video></div><figcaption>Anniversary hamper</figcaption></figure>
+    <figure class="phone" data-speed="-40"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-2d.jpg" data-src="assets/video/reel-2d.mp4"></video></div><figcaption>The “2D” cake</figcaption></figure>
+    <figure class="phone" data-speed="70"><div class="phone__screen"><video muted loop playsinline preload="none" poster="assets/video/reel-orders.jpg" data-src="assets/video/reel-orders.mp4"></video></div><figcaption>A day's orders</figcaption></figure>
   </div>
 </section>
 
@@ -234,7 +237,7 @@
     <ol class="steps__list">
       <li class="step"><span class="step__n">01</span><svg viewBox="0 0 64 64" class="step__icon"><path d="M12 30 H52 L46 56 H18 Z M12 30 C6 22 16 12 24 18 C26 8 38 8 40 18 C48 12 58 22 52 30"/></svg><h3>Pick your cake</h3><p>Choose an occasion above, or send us a photo, a theme or a colour you love.</p></li>
       <li class="step"><span class="step__n">02</span><svg viewBox="0 0 64 64" class="step__icon"><path d="M20 6 H44 a4 4 0 0 1 4 4 V54 a4 4 0 0 1 -4 4 H20 a4 4 0 0 1 -4 -4 V10 a4 4 0 0 1 4 -4 Z M28 50 H36 M24 20 h16 M24 28 h12"/></svg><h3>Call or WhatsApp</h3><p><a href="tel:+917005246168">7005246168</a> · <a href="tel:+919436100919">9436100919</a>. Tell us the date, size and message.</p></li>
-      <li class="step"><span class="step__n">03</span><svg viewBox="0 0 64 64" class="step__icon"><path d="M8 26 L32 12 L56 26 V54 H8 Z M8 26 L32 40 L56 26 M32 40 V54"/></svg><h3>Baked &amp; delivered</h3><p>Made eggless, boxed with care, and brought to your door (paid delivery across Shillong).</p></li>
+      <li class="step"><span class="step__n">03</span><svg viewBox="0 0 64 64" class="step__icon"><path d="M8 26 L32 12 L56 26 V54 H8 Z M8 26 L32 40 L56 26 M32 40 V54"/></svg><h3>Baked &amp; delivered</h3><p>Made eggless, boxed with care, and brought to your door (paid delivery in Shillong).</p><img class="step__photo" src="assets/video/reel-orders.jpg" alt="A day of B for Baking orders boxed up and ready to go" loading="lazy"></li>
     </ol>
   </div>
   <div class="order__cta">
@@ -275,7 +278,7 @@
 </footer>
 
 <!-- ========== ENQUIRY TRAY ========== -->
-<button class="tray-btn" id="trayBtn" aria-controls="tray" aria-expanded="false" data-magnetic><span class="tray-btn__ico" aria-hidden="true">🎂</span><span>Enquiry</span><b id="trayCount">0</b></button>
+<button class="tray-btn" id="trayBtn" aria-controls="tray" aria-expanded="false" data-magnetic><span class="tray-btn__ico" aria-hidden="true">🎂</span><span id="trayLabel">Order</span><b id="trayCount">0</b></button>
 <nav class="mbar" aria-label="Quick order">
   <a class="mbar__wa" href="https://wa.me/917005246168?text=Hi%20B%20for%20Baking!%20I%27d%20like%20to%20order%20a%20cake." target="_blank" rel="noopener">WhatsApp us</a>
   <a class="mbar__call" href="tel:+917005246168">Call</a>
@@ -291,10 +294,10 @@
 
 <div class="cursor" aria-hidden="true"><i class="cursor__dot"></i><i class="cursor__ring"><span class="cursor__label"></span></i></div>
 
-<script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
-<script src="https://unpkg.com/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://unpkg.com/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://unpkg.com/gsap@3.13.0/dist/MotionPathPlugin.min.js"></script>
+<script src="vendor/lenis.min.js"></script>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
+<script src="vendor/MotionPathPlugin.min.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

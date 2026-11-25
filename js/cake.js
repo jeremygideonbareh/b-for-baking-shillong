@@ -17,8 +17,30 @@ float n3(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
              mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float c = n3(vObjP*38.0)*.6 + n3(vObjP*90.0)*.4;
-diffuseColor.rgb *= .82 + .3*c;
-diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*vec3(1.05,.93,.8), smoothstep(.62,.8,c));`);
+diffuseColor.rgb *= .7 + .45*c;
+diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*vec3(1.08,.9,.72), smoothstep(.6,.8,c));
+float pore = smoothstep(.78,.86, n3(vObjP*140.0));
+diffuseColor.rgb *= 1.0 - pore*.35;`);
+  };
+}
+
+// buttercream: horizontal palette-knife ridges on the frosting (normal + tone), object-space
+function buttercream(mat) {
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vObjP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObjP = position;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vObjP;
+float bh(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float bn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(bh(i),bh(i+vec2(1,0)),f.x),mix(bh(i+vec2(0,1)),bh(i+vec2(1,1)),f.x),f.y); }`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+float ang = atan(vObjP.z, vObjP.x);
+float rid = bn(vec2(ang*2.2, vObjP.y*16.0)) * .65 + bn(vec2(ang*7.0, vObjP.y*42.0)) * .35;
+normal = normalize(normal + vec3(0.0, (rid-.5)*.22, 0.0));`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float ang2 = atan(vObjP.z, vObjP.x);
+diffuseColor.rgb *= .965 + .05*bn(vec2(ang2*3.0, vObjP.y*20.0));`);
   };
 }
 
@@ -60,7 +82,7 @@ export function initCake({ canvas, P, onProgress }) {
 
   let ready = false, visible = true, raf = 0, last = performance.now(), t = 0;
   const loader = new GLTFLoader();
-  const draco = new DRACOLoader(); draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/'); loader.setDRACOLoader(draco);
+  const draco = new DRACOLoader(); draco.setDecoderPath('vendor/jsm/libs/draco/gltf/'); draco.setDecoderConfig({ type: 'wasm' }); loader.setDRACOLoader(draco);
   const done = new Promise((resolve, reject) => {
     loader.load('assets/3d/cake.glb', gltf => {
       const model = gltf.scene;
@@ -68,17 +90,19 @@ export function initCake({ canvas, P, onProgress }) {
         if (!o.isMesh) return;
         const n = o.name;
         const mn = o.material.name || '';
-        if (/Frosting|Drip|Cream/.test(mn)) {
+        if (/Frosting|Drip|Cream|Berry/.test(mn)) {
           if (!physCache[mn]) {
-            const src = o.material;
-            physCache[mn] = new THREE.MeshPhysicalMaterial({ color: src.color, roughness: /Drip/.test(mn) ? 0.22 : 0.42, sheen: 0.7, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe9ec'), clearcoat: /Drip/.test(mn) ? 0.7 : 0.08, clearcoatRoughness: 0.35, name: mn });
+            const src = o.material, drip = /Drip/.test(mn), jam = /Berry/.test(mn);
+            physCache[mn] = new THREE.MeshPhysicalMaterial({ color: src.color, roughness: drip ? 0.22 : jam ? 0.18 : 0.42, sheen: jam ? 0 : 0.7, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe9ec'), clearcoat: drip ? 0.7 : jam ? 0.9 : 0.08, clearcoatRoughness: jam ? 0.12 : 0.35, name: mn });
+            if (/Frosting/.test(mn)) buttercream(physCache[mn]);
           }
           o.material = physCache[mn];
         }
         if (/Sponge/.test(mn) && !o.material.userData.crumb) { o.material.userData.crumb = 1; crumb(o.material); }
-        if (/Gold/.test(mn)) { o.material.color.set('#b8863c'); o.material.metalness = 1; o.material.roughness = 0.3; }
+        if (mn === 'GoldLeaf') o.material = new THREE.MeshStandardMaterial({ color: '#e6bb62', metalness: 0.85, roughness: 0.22, emissive: '#8a5f1c', emissiveIntensity: 0.45, side: THREE.DoubleSide, name: mn });
+        else if (/Gold/.test(mn)) { o.material.color.set('#b8863c'); o.material.metalness = 1; o.material.roughness = 0.3; }
         o.material.envMapIntensity = /Gold/.test(mn) ? 1.0 : 0.95;
-        if (/^Shell/.test(n)) { o.material = o.material.clone(); o.material.transparent = true; parts.shell.push(o); }
+        if (/^Shell/.test(n)) { const src = o.material; o.material = src.clone(); o.material.onBeforeCompile = src.onBeforeCompile; o.material.transparent = true; parts.shell.push(o); }
         const m = n.match(/^L(\d)_/);
         if (m) parts.layers.push({ o, i: +m[1], y0: o.position.y });
         if (/_wedge$/.test(n)) parts.wedges.push(o);
@@ -119,7 +143,7 @@ export function initCake({ canvas, P, onProgress }) {
     sc *= mix(1, mobile ? 0.85 : 0.72, endShrink);
     // hand-off: as the pink statement rises, the cake lifts away up and to the left
     const ext = smooth(0, 1, P.exit || 0);
-    x = mix(x, mobile ? -0.3 : -1.6, ext); y += ext * 3.2; sc *= 1 - ext * 0.45;
+    x = mix(x, mobile ? -0.4 : -2.4, ext); y += ext * 4.2; sc *= 1 - ext * 0.45;
     const osc = Math.sin(t * 0.45) * 0.35;
     let rot = osc + pointer.x * 0.35 + h * 1.2 + (1 - intro) * -3.2;
     const sliceRot = -0.55 + Math.sin(t * 0.4) * 0.06 + pointer.x * 0.15;
