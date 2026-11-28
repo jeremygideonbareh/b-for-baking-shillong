@@ -1,4 +1,4 @@
-// B for Baking — motion system (GSAP + ScrollTrigger + Lenis + Three.js cake)
+// Phidarose Cakes — motion system (GSAP + ScrollTrigger + Lenis + Three.js cake)
 const SCROLL_MAP = {
   heroHold: 0,          // hero is not pinned; the cake travels as it scrolls away
   sliceVh: 280,         // see CSS .slice height
@@ -303,11 +303,11 @@ function initStory() {
   const bakeFill = $('#bakeFill'), bakeNum = $('#bakeNum');
   const capEl = $('.layer-cap'); let capIdx = -1;
   const CAPS = {
-    deco: ['Finished by hand', 'piped roses, gold pearls, fresh berries'],
+    deco: ['Finished by hand', 'piped roses, gold pearls, berries'],
     top: ['The drip', 'a blush glaze over silky frosting'],
-    cream: ['Light as air', 'whipped cream between the layers'],
-    jam: ['A little tang', 'berry jam to balance the sweet'],
-    sponge: ['Soft & eggless', 'the sponge everything sits on'],
+    cream: ['Light as air', 'the pale layer above the sponge'],
+    jam: ['The berry layer', 'a ribbon of berry colour'],
+    sponge: ['The sponge', 'the sponge everything sits on'],
   };
   function setCap(key, i) {
     const [t, n] = CAPS[key];
@@ -460,7 +460,7 @@ function initOccasions() {
       c.addEventListener('pointerleave', () => { rx(0); ry(0); });
     });
   }
-  // tiramisu layers draw
+  // illustrated layers draw
   $$('.occ__art path').forEach(p => { const L = p.getTotalLength(); gsap.fromTo(p, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 1.6, ease: 'power2.inOut', scrollTrigger: { trigger: '.occ--art', start: 'top 80%' } }); });
 }
 
@@ -568,17 +568,17 @@ function initSplits() {
 function initTray() {
   const btn = $('#trayBtn'), tray = $('#tray'), list = $('#trayList'), count = $('#trayCount'), send = $('#traySend');
   let items = [];
-  try { items = JSON.parse(localStorage.getItem('bfb-enquiry') || '[]'); } catch (e) {}
+  try { items = JSON.parse(localStorage.getItem('phidarose-enquiry') || '[]'); } catch (e) {}
   const render = () => {
     count.textContent = items.length; btn.classList.toggle('has-items', items.length > 0); $('#trayLabel').textContent = items.length ? 'Enquiry' : 'Order';
     list.innerHTML = items.length ? items.map((it, i) => `<li>${it}<button aria-label="Remove ${it}" data-rm="${i}">×</button></li>`).join('') : '<li class="tray__empty">Nothing yet. Tap <b>+</b> on an occasion.</li>';
     $$('.occ').forEach(o => o.classList.toggle('added', items.includes(o.dataset.item)));
-    try { localStorage.setItem('bfb-enquiry', JSON.stringify(items)); } catch (e) {}
+    try { localStorage.setItem('phidarose-enquiry', JSON.stringify(items)); } catch (e) {}
     const date = $('#trayDate').value, notes = $('#trayNotes').value.trim();
-    let msg = 'Hi B for Baking! I\'d like to enquire about:\n' + (items.length ? items.map(i => '• ' + i).join('\n') : '• a custom cake');
+    let msg = 'Hi Phidarose Cakes! I\'d like to enquire about:\n' + (items.length ? items.map(i => '• ' + i).join('\n') : '• a custom cake');
     if (date) msg += `\nDate needed: ${date}`;
     if (notes) msg += `\nNotes: ${notes}`;
-    send.href = 'https://wa.me/917005246168?text=' + encodeURIComponent(msg);
+    send.href = 'https://wa.me/916009069641?text=' + encodeURIComponent(msg);
   };
   const toggle = open => {
     const isOpen = open ?? tray.hidden;
